@@ -5,15 +5,14 @@ const cors = require('cors');
 
 // Configura la conexión con la base de datos de Render PostgreSQL
 const pool = new Pool({
-  user: 'medialert_user',
-  host: 'dpg-d1t8i2a4d50c73b4etng-a.oregon-postgres.render.com',
-  database: 'medialert',
-  password: 'rXzA1KwC453MqwgUXjexAGHz8x6tId2h',
-  port: 5432,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT || 5432,
+  ssl: { rejectUnauthorized: false }
 });
+
 
 // Verificar conexión al iniciar
 pool.connect((err, client, release) => {
@@ -43,6 +42,7 @@ app.get('/api/medicamentos', async (req, res) => {
     res.status(500).json({ error: 'Error al consultar medicamentos' });
   }
 });
+
 
 // Iniciar servidor
 const PORT = process.env.PORT || 3000;
