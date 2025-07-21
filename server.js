@@ -3,16 +3,24 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 
+// Verifica que las variables de entorno necesarias estén definidas
+const requiredEnv = ['DB_USER', 'DB_HOST', 'DB_NAME', 'DB_PASSWORD', 'DB_PORT'];
+requiredEnv.forEach((envVar) => {
+  if (!process.env[envVar]) {
+    console.error(`❌ FALTA variable de entorno: ${envVar}`);
+    process.exit(1);
+  }
+});
+
 // Configura la conexión con la base de datos de Render PostgreSQL
 const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT || 5432,
+  port: parseInt(process.env.DB_PORT) || 5432,
   ssl: { rejectUnauthorized: false }
 });
-
 
 // Verificar conexión al iniciar
 pool.connect((err, client, release) => {
@@ -42,7 +50,6 @@ app.get('/api/medicamentos', async (req, res) => {
     res.status(500).json({ error: 'Error al consultar medicamentos' });
   }
 });
-
 
 // Iniciar servidor
 const PORT = process.env.PORT || 3000;
