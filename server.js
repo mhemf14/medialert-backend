@@ -63,9 +63,9 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// 🟢 REGISTRO
 app.post('/registro', async (req, res) => {
-  const { rut, contrasena, rol } = req.body;
+  const { rut, contrasena, rol, nombre, telefono } = req.body;
+
   try {
     const existe = await pool.query('SELECT * FROM usuarios WHERE rut = $1', [rut]);
     if (existe.rows.length > 0) {
@@ -73,8 +73,8 @@ app.post('/registro', async (req, res) => {
     }
 
     await pool.query(
-      'INSERT INTO usuarios (rut, contrasena, rol) VALUES ($1, $2, $3)',
-      [rut, contrasena, rol]
+      'INSERT INTO usuarios (rut, contrasena, rol, nombre, telefono) VALUES ($1, $2, $3, $4, $5)',
+      [rut, contrasena, rol, nombre, telefono]
     );
 
     res.json({ mensaje: 'Usuario registrado exitosamente' });
@@ -83,6 +83,7 @@ app.post('/registro', async (req, res) => {
     res.status(500).json({ error: 'Error interno al registrar usuario' });
   }
 });
+
 
 // 🟢 Obtener TODOS los medicamentos
 app.get('/api/medicamentos', async (req, res) => {
