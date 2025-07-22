@@ -141,29 +141,28 @@ app.get('/api/medicamentos', async (req, res) => {
   }
 });
 
-// 🛠️ Vista Admin: ver asignaciones
 app.get('/admin/asignaciones', async (req, res) => {
   try {
-    const result = await pool.query(`
+    const query = `
       SELECT 
-        c.nombre AS cuidador,
-        p.nombre AS paciente,
         m.nombre AS medicamento,
-        a.dia,
-        a.hora,
-        a.estado
-      FROM asignaciones a
-      JOIN usuarios c ON a.cuidador_rut = c.rut
-      JOIN usuarios p ON a.paciente_rut = p.rut
-      JOIN medicamentos m ON a.medicamento_id = m.id
-    `);
-
+        m.dosis,
+        m.dias,
+        m.horas,
+        u1.nombre AS paciente,
+        u2.nombre AS cuidador
+      FROM medicamentos m
+      JOIN usuarios u1 ON m.rut_paciente = u1.rut
+      LEFT JOIN usuarios u2 ON u1.rut_cuidador = u2.rut;
+    `;
+    const result = await pool.query(query);
     res.json(result.rows);
   } catch (err) {
-    console.error('❌ Error en /admin/asignaciones:', err.message);
+    console.error('❌ Error en GET /admin/asignaciones:', err.message);
     res.status(500).json({ error: 'Error al obtener asignaciones' });
   }
 });
+
 
 // 🚀 Lanzar servidor
 const PORT = process.env.PORT || 3000;
