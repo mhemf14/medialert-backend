@@ -143,25 +143,26 @@ app.get('/api/medicamentos', async (req, res) => {
 
 app.get('/admin/asignaciones', async (req, res) => {
   try {
-    const query = `
+    const result = await pool.query(`
       SELECT 
-        m.nombre AS medicamento,
-        m.dosis,
-        m.dias,
-        m.horas,
+        m.id,
+        u2.nombre AS cuidador,
         u1.nombre AS paciente,
-        u2.nombre AS cuidador
+        m.nombre AS medicamento,
+        m.dias,
+        m.horas
       FROM medicamentos m
       JOIN usuarios u1 ON m.rut_paciente = u1.rut
-      LEFT JOIN usuarios u2 ON u1.rut_cuidador = u2.rut;
-    `;
-    const result = await pool.query(query);
+      LEFT JOIN usuarios u2 ON u1.rut_cuidador = u2.rut
+    `);
+
     res.json(result.rows);
   } catch (err) {
-    console.error('❌ Error en GET /admin/asignaciones:', err.message);
-    res.status(500).json({ error: 'Error al obtener asignaciones' });
+    console.error('Error al obtener asignaciones:', err);
+    res.status(500).send('Error al obtener asignaciones');
   }
 });
+
 
 
 // 🚀 Lanzar servidor
