@@ -40,7 +40,7 @@ app.get('/', (req, res) => {
   res.send('Servidor Express conectado a PostgreSQL 🚀');
 });
 
-// Ruta de login
+
 // Ruta de login
 app.post('/login', async (req, res) => {
   const { rut, contrasena } = req.body;
@@ -63,6 +63,28 @@ app.post('/login', async (req, res) => {
   } catch (err) {
     console.error('❌ Error en /login:', err.message);
     res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+app.post('/login', async (req, res) => {
+  const { rut, contrasena } = req.body;
+
+  try {
+    const result = await pool.query(
+      'SELECT * FROM usuarios WHERE rut = $1 AND contrasena = $2',
+      [rut, contrasena]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
+    }
+
+    const usuario = result.rows[0];
+    delete usuario.contrasena; // por seguridad
+    res.json(usuario);
+  } catch (err) {
+    console.error('Error en /login:', err.message);
+    res.status(500).json({ error: 'Error al procesar la solicitud' });
   }
 });
 
