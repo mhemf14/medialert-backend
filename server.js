@@ -3,7 +3,6 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 
-// Verifica que las variables de entorno necesarias estén definidas
 const requiredEnv = ['DB_USER', 'DB_HOST', 'DB_NAME', 'DB_PASSWORD', 'DB_PORT'];
 requiredEnv.forEach((envVar) => {
   if (!process.env[envVar]) {
@@ -12,7 +11,6 @@ requiredEnv.forEach((envVar) => {
   }
 });
 
-// Configura la conexión con la base de datos de Render PostgreSQL
 const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
@@ -22,7 +20,6 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Verificar conexión al iniciar
 pool.connect((err, client, release) => {
   if (err) {
     return console.error('❌ Error al conectar a PostgreSQL:', err.stack);
@@ -35,37 +32,12 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Ruta principal
+// 🟢 Comprobación básica del servidor
 app.get('/', (req, res) => {
   res.send('Servidor Express conectado a PostgreSQL 🚀');
 });
 
-
-// Ruta de login
-app.post('/login', async (req, res) => {
-  const { rut, contrasena } = req.body;
-
-  try {
-    const query = 'SELECT * FROM usuarios WHERE rut = $1 AND contrasena = $2';
-    const values = [rut, contrasena];
-    const result = await pool.query(query, values);
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Credenciales incorrectas' });
-    }
-
-    const usuario = result.rows[0];
-
-    // Opcional: no enviar la contraseña en la respuesta
-    delete usuario.contrasena;
-
-    res.json(usuario);
-  } catch (err) {
-    console.error('❌ Error en /login:', err.message);
-    res.status(500).json({ error: 'Error en el servidor' });
-  }
-});
-
+// 🟡 LOGIN
 app.post('/login', async (req, res) => {
   const { rut, contrasena } = req.body;
 
@@ -80,7 +52,7 @@ app.post('/login', async (req, res) => {
     }
 
     const usuario = result.rows[0];
-    delete usuario.contrasena; // por seguridad
+    delete usuario.contrasena;
     res.json(usuario);
   } catch (err) {
     console.error('Error en /login:', err.message);
@@ -88,8 +60,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-
-// Ruta de registro
+// 🟢 REGISTRO
 app.post('/registro', async (req, res) => {
   const { rut, contrasena, rol } = req.body;
   try {
@@ -110,7 +81,7 @@ app.post('/registro', async (req, res) => {
   }
 });
 
-// Obtener medicamentos
+// 🟢 Obtener medicamentos (todos)
 app.get('/api/medicamentos', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM medicamentos');
@@ -121,7 +92,45 @@ app.get('/api/medicamentos', async (req, res) => {
   }
 });
 
-// Iniciar servidor
+// 🟢 Agregar medicamento por RUT del paciente
+app.post('/medicamentos_por_rut', async (req, res) => {
+  const { nombre, dosis, dias, horas, rut_paciente } = req.body;
+
+  if (!nombre || !dosis || !dias || !horas || !rut_paciente) {
+    return res.status(400).json({ error: 'Faltan datos obligatorios' });
+  }
+
+  try {
+    const insertQuery = `
+      INSERT INTO medicamentos (nombre, dosis, dias, horas, rut_paciente)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *`;
+    const result = await pool.query(insertQuery, [nombre, dosis, dias, horas, rut_paciente]);
+
+    res.status(201).json({ mensaje: 'Medicamento agregado exitosamente', data: result.rows[0] });
+  } catch (err) {
+    console.error('❌ Error al insertar medicamento:', err.message);
+    res.status(500).json({ error: 'Error al agregar medicamento' });
+  }
+});
+app.post('/medicamentos_por_rut', async (req, res) => {
+  const { nombre, dosis, dias, horas, rut_paciente } = req.body;
+
+  try {
+    await pool.query(
+      'INSERT INTO medicamentos (nombre, dosis, dias, horas, rut_paciente) VALUES ($1, $2, $3, $4, $5)',
+      [nombre, dosis, dias, horas, rut_paciente]
+    );
+
+    res.json({ mensaje: 'Medicamento agregado correctamente' });
+  } catch (err) {
+    console.error('❌ Error en /medicamentos_por_rut:', err.message);
+    res.status(500).json({ error: 'Error al agregar medicamento' });
+  }
+});
+
+
+// 🔵 Iniciar servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
