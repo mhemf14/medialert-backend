@@ -12,7 +12,7 @@ requiredEnv.forEach((envVar) => {
   }
 });
 
-// Configura la conexión con la base de datos de Render PostgreSQL
+// Configura la conexión con la base de datos PostgreSQL en Render
 const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
@@ -35,18 +35,48 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Ruta principal para comprobar que el servidor está corriendo
+// Ruta raíz
 app.get('/', (req, res) => {
   res.send('Servidor Express conectado a PostgreSQL 🚀');
 });
 
-// Obtener todos los medicamentos
+// Ruta de inicio de sesión
+app.post('/login', async (req, res) => {
+  const { rut, contrasena } = req.body;
+
+  if (!rut || !contrasena) {
+    return res.status(400).json({ error: 'RUT y contraseña son obligatorios' });
+  }
+
+  try {
+    const query = 'SELECT * FROM usuarios WHERE rut = $1 AND contrasena = $2';
+    const values = [rut, contrasena];
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Credenciales inválidas' });
+    }
+
+    const usuario = result.rows[0];
+    res.json({
+      id: usuario.id,
+      nombre: usuario.nombre,
+      rut: usuario.rut,
+      rol: usuario.rol
+    });
+  } catch (err) {
+    console.error('❌ Error en /login:', err.message);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Ruta para obtener medicamentos
 app.get('/api/medicamentos', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM medicamentos');
     res.json(result.rows);
   } catch (err) {
-    console.error('❌ Error en la consulta a /api/medicamentos:', err.message);
+    console.error('❌ Error en /api/medicamentos:', err.message);
     res.status(500).json({ error: 'Error al consultar medicamentos' });
   }
 });
