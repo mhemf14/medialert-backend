@@ -3,6 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 
+// 🔧 Verifica variables de entorno
 const requiredEnv = ['DB_USER', 'DB_HOST', 'DB_NAME', 'DB_PASSWORD', 'DB_PORT'];
 requiredEnv.forEach((envVar) => {
   if (!process.env[envVar]) {
@@ -11,6 +12,7 @@ requiredEnv.forEach((envVar) => {
   }
 });
 
+// 🔌 Configura conexión PostgreSQL
 const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
@@ -20,6 +22,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
+// 🔍 Verificar conexión inicial
 pool.connect((err, client, release) => {
   if (err) {
     return console.error('❌ Error al conectar a PostgreSQL:', err.stack);
@@ -32,7 +35,7 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// 🟢 Comprobación básica del servidor
+// 🟢 Comprobación básica
 app.get('/', (req, res) => {
   res.send('Servidor Express conectado a PostgreSQL 🚀');
 });
@@ -81,7 +84,7 @@ app.post('/registro', async (req, res) => {
   }
 });
 
-// 🟢 Obtener medicamentos (todos)
+// 🟢 Obtener TODOS los medicamentos
 app.get('/api/medicamentos', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM medicamentos');
@@ -92,7 +95,7 @@ app.get('/api/medicamentos', async (req, res) => {
   }
 });
 
-// 🟢 Agregar medicamento por RUT del paciente
+// 🟢 Agregar medicamento por RUT
 app.post('/medicamentos_por_rut', async (req, res) => {
   const { nombre, dosis, dias, horas, rut_paciente } = req.body;
 
@@ -113,22 +116,8 @@ app.post('/medicamentos_por_rut', async (req, res) => {
     res.status(500).json({ error: 'Error al agregar medicamento' });
   }
 });
-app.post('/medicamentos_por_rut', async (req, res) => {
-  const { nombre, dosis, dias, horas, rut_paciente } = req.body;
 
-  try {
-    await pool.query(
-      'INSERT INTO medicamentos (nombre, dosis, dias, horas, rut_paciente) VALUES ($1, $2, $3, $4, $5)',
-      [nombre, dosis, dias, horas, rut_paciente]
-    );
-
-    res.json({ mensaje: 'Medicamento agregado correctamente' });
-  } catch (err) {
-    console.error('❌ Error en /medicamentos_por_rut:', err.message);
-    res.status(500).json({ error: 'Error al agregar medicamento' });
-  }
-});
-
+// 🟢 Obtener medicamentos por RUT
 app.get('/medicamentos_por_rut/:rut', async (req, res) => {
   const rut = req.params.rut;
 
@@ -144,7 +133,6 @@ app.get('/medicamentos_por_rut/:rut', async (req, res) => {
     res.status(500).json({ error: 'Error al consultar medicamentos del paciente' });
   }
 });
-
 
 // 🔵 Iniciar servidor
 const PORT = process.env.PORT || 3000;
