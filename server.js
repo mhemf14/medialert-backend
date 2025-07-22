@@ -105,10 +105,18 @@ app.post('/medicamentos_por_rut', async (req, res) => {
 
   try {
     const insertQuery = `
-      INSERT INTO medicamentos (nombre, dosis, dias, horas, rut_paciente)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *`;
-    const result = await pool.query(insertQuery, [nombre, dosis, dias, horas, rut_paciente]);
+  INSERT INTO medicamentos (nombre, dosis, dias, horas, rut_paciente)
+  VALUES ($1, $2, $3, $4, $5)
+  RETURNING *`;
+
+const result = await pool.query(insertQuery, [
+  nombre,
+  dosis,
+  dias.join(','),   // ✅ Convertimos el array a string: "Lunes,Miércoles"
+  horas.join(','),  // ✅ Lo mismo: "08:00,20:00"
+  rut_paciente
+]);
+
 
     res.status(201).json({ mensaje: 'Medicamento agregado exitosamente', data: result.rows[0] });
   } catch (err) {
