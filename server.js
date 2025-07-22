@@ -35,12 +35,12 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// 🟢 Comprobación básica
+// 🟢 Ruta base
 app.get('/', (req, res) => {
   res.send('Servidor Express conectado a PostgreSQL 🚀');
 });
 
-// 🟡 LOGIN
+// 🔐 Login
 app.post('/login', async (req, res) => {
   const { rut, contrasena } = req.body;
 
@@ -63,6 +63,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
+// 📝 Registro
 app.post('/registro', async (req, res) => {
   const { rut, contrasena, rol, nombre, telefono } = req.body;
 
@@ -84,19 +85,7 @@ app.post('/registro', async (req, res) => {
   }
 });
 
-
-// 🟢 Obtener TODOS los medicamentos
-app.get('/api/medicamentos', async (req, res) => {
-  try {
-    const result = await pool.query('SELECT * FROM medicamentos');
-    res.json(result.rows);
-  } catch (err) {
-    console.error('❌ Error al obtener medicamentos:', err.message);
-    res.status(500).json({ error: 'Error al consultar medicamentos' });
-  }
-});
-
-// 🟢 Agregar medicamento por RUT
+// ➕ Agregar medicamento
 app.post('/medicamentos_por_rut', async (req, res) => {
   const { nombre, dosis, dias, horas, rut_paciente } = req.body;
 
@@ -105,19 +94,17 @@ app.post('/medicamentos_por_rut', async (req, res) => {
   }
 
   try {
-    const insertQuery = `
-  INSERT INTO medicamentos (nombre, dosis, dias, horas, rut_paciente)
-  VALUES ($1, $2, $3, $4, $5)
-  RETURNING *`;
-
-const result = await pool.query(insertQuery, [
-  nombre,
-  dosis,
-  dias.join(','),   // ✅ Convertimos el array a string: "Lunes,Miércoles"
-  horas.join(','),  // ✅ Lo mismo: "08:00,20:00"
-  rut_paciente
-]);
-
+    const result = await pool.query(
+      `INSERT INTO medicamentos (nombre, dosis, dias, horas, rut_paciente)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [
+        nombre,
+        dosis,
+        dias.join(','),  // Array → string
+        horas.join(','), // Array → string
+        rut_paciente
+      ]
+    );
 
     res.status(201).json({ mensaje: 'Medicamento agregado exitosamente', data: result.rows[0] });
   } catch (err) {
@@ -126,7 +113,7 @@ const result = await pool.query(insertQuery, [
   }
 });
 
-// 🟢 Obtener medicamentos por RUT
+// 🔍 Obtener medicamentos por RUT
 app.get('/medicamentos_por_rut/:rut', async (req, res) => {
   const rut = req.params.rut;
 
@@ -138,12 +125,47 @@ app.get('/medicamentos_por_rut/:rut', async (req, res) => {
 
     res.json(result.rows);
   } catch (err) {
-    console.error('❌ Error en GET /medicamentos_por_rut/:rut:', err.message);
+    console.error('❌ Error al consultar medicamentos:', err.message);
     res.status(500).json({ error: 'Error al consultar medicamentos del paciente' });
   }
 });
 
-// 🔵 Iniciar servidor
+// 👁️‍🗨️ Obtener todos los medicamentos
+app.get('/api/medicamentos', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM medicamentos');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('❌ Error al obtener medicamentos:', err.message);
+    res.status(500).json({ error: 'Error al consultar medicamentos' });
+  }
+});
+
+// 🛠️ Vista Admin: ver asignaciones
+app.get('/admin/asignaciones', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        c.nombre AS cuidador,
+        p.nombre AS paciente,
+        m.nombre AS medicamento,
+        a.dia,
+        a.hora,
+        a.estado
+      FROM asignaciones a
+      JOIN usuarios c ON a.cuidador_rut = c.rut
+      JOIN usuarios p ON a.paciente_rut = p.rut
+      JOIN medicamentos m ON a.medicamento_id = m.id
+    `);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('❌ Error en /admin/asignaciones:', err.message);
+    res.status(500).json({ error: 'Error al obtener asignaciones' });
+  }
+});
+
+// 🚀 Lanzar servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
