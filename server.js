@@ -41,25 +41,31 @@ app.get('/', (req, res) => {
 });
 
 // Ruta de login
+// Ruta de login
 app.post('/login', async (req, res) => {
   const { rut, contrasena } = req.body;
-  try {
-    const result = await pool.query(
-      'SELECT * FROM usuarios WHERE rut = $1 AND contrasena = $2',
-      [rut, contrasena]
-    );
 
-    if (result.rows.length > 0) {
-      const user = result.rows[0];
-      res.json({ rut: user.rut, rol: user.rol });
-    } else {
-      res.status(401).json({ error: 'Credenciales inválidas' });
+  try {
+    const query = 'SELECT * FROM usuarios WHERE rut = $1 AND contrasena = $2';
+    const values = [rut, contrasena];
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
     }
+
+    const usuario = result.rows[0];
+
+    // Opcional: no enviar la contraseña en la respuesta
+    delete usuario.contrasena;
+
+    res.json(usuario);
   } catch (err) {
-    console.error('❌ Error al hacer login:', err.message);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('❌ Error en /login:', err.message);
+    res.status(500).json({ error: 'Error en el servidor' });
   }
 });
+
 
 // Ruta de registro
 app.post('/registro', async (req, res) => {
