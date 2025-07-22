@@ -129,6 +129,22 @@ app.post('/medicamentos_por_rut', async (req, res) => {
   }
 });
 
+app.get('/medicamentos_por_rut/:rut', async (req, res) => {
+  const rut = req.params.rut;
+
+  try {
+    const result = await pool.query(
+      'SELECT * FROM medicamentos WHERE rut_paciente = $1',
+      [rut]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('❌ Error en GET /medicamentos_por_rut/:rut:', err.message);
+    res.status(500).json({ error: 'Error al consultar medicamentos del paciente' });
+  }
+});
+
 
 // 🔵 Iniciar servidor
 const PORT = process.env.PORT || 3000;
