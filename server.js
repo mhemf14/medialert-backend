@@ -240,6 +240,46 @@ app.put('/medicamentos/:id', async (req, res) => {
   }
 });
 
+// 🛠️ Actualizar un medicamento por ID
+app.put('/medicamentos/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const { nombre, dosis, dias, horas } = req.body;
+
+  // Validación mínima
+  if (!nombre || !dosis || !dias || !horas) {
+    return res.status(400).json({ error: 'Faltan datos para actualizar' });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE medicamentos
+         SET nombre = $1,
+             dosis  = $2,
+             dias   = $3,
+             horas  = $4
+       WHERE id = $5
+       RETURNING *`,
+      [
+        nombre,
+        dosis,
+        // si vienes del front en array, conviértelo a string:
+        Array.isArray(dias) ? dias.join(',') : dias,
+        Array.isArray(horas) ? horas.join(',') : horas,
+        id
+      ]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Medicamento no encontrado' });
+    }
+
+    res.json({ mensaje: 'Medicamento actualizado', data: result.rows[0] });
+  } catch (err) {
+    console.error('❌ Error al actualizar medicamento:', err.message);
+    res.status(500).json({ error: 'Error interno al actualizar medicamento' });
+  }
+});
+
 // 🛠️ Eliminar un medicamento por ID
 app.delete('/medicamentos/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
@@ -260,6 +300,7 @@ app.delete('/medicamentos/:id', async (req, res) => {
     res.status(500).json({ error: 'Error interno al eliminar medicamento' });
   }
 });
+
 
 
 // 🚀 Lanzar servidor
