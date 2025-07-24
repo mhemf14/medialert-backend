@@ -162,7 +162,43 @@ app.get('/admin/asignaciones', async (req, res) => {
     res.status(500).send('Error al obtener asignaciones');
   }
 });
+// 🔎 Obtener pacientes a cargo de un cuidador
+app.get('/pacientes_por_cuidador/:rut', async (req, res) => {
+  const rutCuidador = req.params.rut;
 
+  try {
+    const result = await pool.query(
+      `SELECT rut, nombre 
+       FROM usuarios 
+       WHERE rol = 'paciente' AND rut_cuidador = $1`,
+      [rutCuidador]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('❌ Error al obtener pacientes del cuidador:', err.message);
+    res.status(500).json({ error: 'Error al obtener pacientes del cuidador' });
+  }
+});
+
+// 🔎 Obtener pacientes a cargo de un cuidador
+app.get('/pacientes_por_cuidador/:rut', async (req, res) => {
+  const rutCuidador = req.params.rut;
+
+  try {
+    const result = await pool.query(
+      `SELECT rut, nombre 
+       FROM usuarios 
+       WHERE rol = 'paciente'
+         AND rut_cuidador = $1`,
+      [rutCuidador]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('❌ Error al obtener pacientes del cuidador:', err.message);
+    res.status(500).json({ error: 'Error al obtener pacientes del cuidador' });
+  }
+});
 
 
 // 🚀 Lanzar servidor
