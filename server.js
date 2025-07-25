@@ -97,7 +97,9 @@ app.post('/registro', async (req, res) => {
 });
 
 // ➕ Agregar medicamento
+// Ruta para agregar un medicamento a un paciente
 app.post('/medicamentos_por_rut', async (req, res) => {
+  // Log de la carga útil recibida
   console.log('▶️  /medicamentos_por_rut body:', req.body);
   const { nombre, dosis, dias, horas, rut_paciente, rut_cuidador } = req.body;
 
