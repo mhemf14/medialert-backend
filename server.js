@@ -98,6 +98,7 @@ app.post('/registro', async (req, res) => {
 
 // ➕ Agregar medicamento
 app.post('/medicamentos_por_rut', async (req, res) => {
+  console.log('▶️  /medicamentos_por_rut body:', req.body);
   const { nombre, dosis, dias, horas, rut_paciente, rut_cuidador } = req.body;
 
   // Permite arreglos vacíos pero no valores nulos o indefinidos
