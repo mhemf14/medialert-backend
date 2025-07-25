@@ -31,6 +31,17 @@ pool.connect((err, client, release) => {
   release();
 });
 
+// 🗄️ Asegura que la tabla tenga la columna necesaria para el cuidador
+(async () => {
+  try {
+    await pool.query(
+      "ALTER TABLE medicamentos ADD COLUMN IF NOT EXISTS rut_cuidador VARCHAR(20)"
+    );
+  } catch (err) {
+    console.error('Error al verificar columna rut_cuidador:', err.message);
+  }
+})();
+
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
@@ -87,22 +98,33 @@ app.post('/registro', async (req, res) => {
 
 // ➕ Agregar medicamento
 app.post('/medicamentos_por_rut', async (req, res) => {
-  const { nombre, dosis, dias, horas, rut_paciente } = req.body;
+  const { nombre, dosis, dias, horas, rut_paciente, rut_cuidador } = req.body;
 
-  if (!nombre || !dosis || !dias || !horas || !rut_paciente) {
+  if (!nombre || !dosis || !dias || !horas || !rut_paciente || !rut_cuidador) {
     return res.status(400).json({ error: 'Faltan datos obligatorios' });
   }
 
   try {
+    // ✔️ Verificar que el paciente pertenezca a ese cuidador
+    const validacion = await pool.query(
+      `SELECT rut FROM usuarios WHERE rut = $1 AND rut_cuidador = $2`,
+      [rut_paciente, rut_cuidador]
+    );
+
+    if (validacion.rows.length === 0) {
+      return res.status(403).json({ error: 'El paciente no corresponde al cuidador indicado' });
+    }
+
     const result = await pool.query(
-      `INSERT INTO medicamentos (nombre, dosis, dias, horas, rut_paciente)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      `INSERT INTO medicamentos (nombre, dosis, dias, horas, rut_paciente, rut_cuidador)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [
         nombre,
         dosis,
         dias.join(','),  // Array → string
         horas.join(','), // Array → string
-        rut_paciente
+        rut_paciente,
+        rut_cuidador
       ]
     );
 
@@ -144,7 +166,7 @@ app.get('/api/medicamentos', async (req, res) => {
 app.get('/admin/asignaciones', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT 
+      SELECT
         m.id,
         u2.nombre AS cuidador,
         u1.nombre AS paciente,
@@ -153,7 +175,7 @@ app.get('/admin/asignaciones', async (req, res) => {
         m.horas
       FROM medicamentos m
       JOIN usuarios u1 ON m.rut_paciente = u1.rut
-      LEFT JOIN usuarios u2 ON u1.rut_cuidador = u2.rut
+      LEFT JOIN usuarios u2 ON m.rut_cuidador = u2.rut
     `);
 
     res.json(result.rows);
@@ -180,66 +202,6 @@ app.get('/pacientes_por_cuidador/:rut', async (req, res) => {
     res.status(500).json({ error: 'Error al obtener pacientes del cuidador' });
   }
 });
-
-// 🔎 Obtener pacientes a cargo de un cuidador
-app.get('/pacientes_por_cuidador/:rut', async (req, res) => {
-  const rutCuidador = req.params.rut;
-
-  try {
-    const result = await pool.query(
-      `SELECT rut, nombre 
-       FROM usuarios 
-       WHERE rol = 'paciente'
-         AND rut_cuidador = $1`,
-      [rutCuidador]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error('❌ Error al obtener pacientes del cuidador:', err.message);
-    res.status(500).json({ error: 'Error al obtener pacientes del cuidador' });
-  }
-});
-
-// 🛠️ Actualizar un medicamento por ID
-app.put('/medicamentos/:id', async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  const { nombre, dosis, dias, horas } = req.body;
-
-  // Validación mínima
-  if (!nombre || !dosis || !dias || !horas) {
-    return res.status(400).json({ error: 'Faltan datos para actualizar' });
-  }
-
-  try {
-    const result = await pool.query(
-      `UPDATE medicamentos
-         SET nombre = $1,
-             dosis  = $2,
-             dias   = $3,
-             horas  = $4
-       WHERE id = $5
-       RETURNING *`,
-      [
-        nombre,
-        dosis,
-        // si vienes del front en array, conviértelo a string:
-        Array.isArray(dias) ? dias.join(',') : dias,
-        Array.isArray(horas) ? horas.join(',') : horas,
-        id
-      ]
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Medicamento no encontrado' });
-    }
-
-    res.json({ mensaje: 'Medicamento actualizado', data: result.rows[0] });
-  } catch (err) {
-    console.error('❌ Error al actualizar medicamento:', err.message);
-    res.status(500).json({ error: 'Error interno al actualizar medicamento' });
-  }
-});
-
 // 🛠️ Actualizar un medicamento por ID
 app.put('/medicamentos/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
