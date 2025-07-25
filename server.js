@@ -100,7 +100,15 @@ app.post('/registro', async (req, res) => {
 app.post('/medicamentos_por_rut', async (req, res) => {
   const { nombre, dosis, dias, horas, rut_paciente, rut_cuidador } = req.body;
 
-  if (!nombre || !dosis || !dias || !horas || !rut_paciente || !rut_cuidador) {
+  // Permite arreglos vacíos pero no valores nulos o indefinidos
+  if (
+    !nombre ||
+    !dosis ||
+    dias == null ||
+    horas == null ||
+    !rut_paciente ||
+    !rut_cuidador
+  ) {
     return res.status(400).json({ error: 'Faltan datos obligatorios' });
   }
 
@@ -115,14 +123,17 @@ app.post('/medicamentos_por_rut', async (req, res) => {
       return res.status(403).json({ error: 'El paciente no corresponde al cuidador indicado' });
     }
 
+    const diasStr = Array.isArray(dias) ? dias.join(',') : dias;
+    const horasStr = Array.isArray(horas) ? horas.join(',') : horas;
+
     const result = await pool.query(
       `INSERT INTO medicamentos (nombre, dosis, dias, horas, rut_paciente, rut_cuidador)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [
         nombre,
         dosis,
-        dias.join(','),  // Array → string
-        horas.join(','), // Array → string
+        diasStr,
+        horasStr,
         rut_paciente,
         rut_cuidador
       ]
